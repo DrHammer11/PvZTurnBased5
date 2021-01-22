@@ -69,7 +69,7 @@ currentVolume = 1;
 CriticalStage = false;
 turntime = 1500;
 SoundArray = [loss, win, ZombieTurnTheme, PlantTurnTheme, MenuTheme];
-News = "Beta Version 1.5.0 is out now, I'll probably have to release a balancing patch soon because I'm sure some random zombie is OP now<br><br> \
+News = "Beta Version 1.5.1 is out now, Yeti is no longer as OP<br><br> \
 New features: <br> \
 Three new zombies: Football Zombie, Screen Door Zombie, and Newspaper Zombie<br>\
 New armor heart symbol to indicate if the zombie’s health is part of it’s armor or not<br>\
@@ -87,7 +87,8 @@ Balance changes:<br>\
 Gargantuar’s Pole Smash now takes 1 turn to reload instead of 3<br>\
 Gargantuar’s Imp Toss now hits 80% of the time instead of 70%<br>\
 Gargantuar’s Imp Toss now does 35 damage instead of 30<br>\
-Yeti’s melee attack is now called “Frosty Touch” and does 20 damage with guaranteed freezing. This is to make Yeti more of a support zombie.<br>";
+Yeti’s Snowball attack now freezes only 20% of the time instead of 33%<br>\
+Yeti’s melee attack is now called “Frosty Touch” and does 20 damage with guaranteed freezing and two turn cooldown. This is to make Yeti more of a support zombie.<br>";
 function RemoveBlocker() {
     wc.removeChild(document.getElementById("MenuBlocker"))
     wc.removeChild(document.getElementById("MenuLoader"))
@@ -137,7 +138,7 @@ function LoadNew() {
     Message.appendChild(CloseButton);
     MessageHeader = document.createElement("p");
     MessageHeader.className = "MessageHeader";
-    MessageHeader.innerHTML = "What's new in Version 1.5.0";
+    MessageHeader.innerHTML = "What's new in Version 1.5.1";
     Message.appendChild(MessageHeader);
     MessageText = document.createElement("p");
     MessageText.className = "MessageText";
@@ -215,7 +216,7 @@ function BackToMenu() {
     wc.innerHTML = '';
     vc = document.createElement("div");
     vc.id="VersionCount";
-    vc.innerHTML="Beta Version 1.5.0";
+    vc.innerHTML="Beta Version 1.5.1";
     wc.appendChild(vc);
     tc = document.createElement("div");
     tc.id="TitleContainer";
@@ -257,7 +258,7 @@ function BackToMenu() {
     vs.onclick=function() {LoadSettings()};
     wc.appendChild(vs);
 }
-function StartGame() {
+function StartGame() { /*add lawn background so chomper is defending house*/
 SoundArray = [loss, win, ZombieTurnTheme, PlantTurnTheme, MenuTheme];
 for (theme in SoundArray) {
     theme = SoundArray[theme];
@@ -415,9 +416,9 @@ function FireProjectile() {
                     if (gi.character.canBeEaten) {
                         willhit = true;
                         CanAbility = [false,false];
-                        CanMove = false; 
+                        CanMove = true; 
                         UpdateTurnCount();
-                        IsPlayerTurn = false;
+                        IsPlayerTurn = true;
                         CreateConsoleText("Armor Chomper has ate "+gi.character.name+".");
                         AC.chewing = true;
                         AC.chewingtime = gi.character.chewingtime+1;
@@ -537,7 +538,7 @@ function FireProjectile() {
                         fighterPhysArray.splice(fighterArray.indexOf(gi.character), 1);
                         fighterArray.splice(fighterArray.indexOf(gi.character), 1); 
                         zhealtharray[ZombieArray.indexOf(gi.character)].remove();
-                        zhealtharray.splice(ZombieArray.indexOf(gi.character), 1);
+                        zhealtharray.splice(ZombieArray.indexOf(gi.character), 1); //*still fix problem with armor hearts not working*/
                         zhealthbararray[ZombieArray.indexOf(gi.character)].remove();
                         zhealthbararray.splice(ZombieArray.indexOf(gi.character), 1);
                         ZombieArray.splice(ZombieArray.indexOf(gi.character), 1);
@@ -889,6 +890,7 @@ function clone(obj) {
     );
 }
 fighterArray = [];
+BossWaves = [];
 //armor chomper things
 Goop = new AttackType();
 Goop.name = "Goop";
@@ -916,7 +918,7 @@ Seed.shots = 3;
 Seed.displaySprite = "SeedSpitIcon.PNG";
 Swallow = new AttackType();
 Swallow.name = "Swallow";
-Swallow.desc = "Open up your mouth and eat the zombie in front of you. <br>Dmg: Infinite ∫ range: Melee (1 space) ∫ Cooldown: 1 turn ∫ Armor Chomper cannot move or attack while chewing a zombie";
+Swallow.desc = "Open up your mouth and eat the zombie in front of you. <br>Dmg: Infinite ∫ range: Melee (1 space) ∫ Cooldown: 1 turn ∫ Armor Chomper cannot attack while chewing a zombie";
 Swallow.damage = 2001;
 Swallow.range = 1;
 Swallow.reloadTime = 1;
@@ -944,12 +946,6 @@ Rock.damage = 10;
 Rock.range = 3;
 Rock.accuracy = 75;
 Rock.reloadTime = 1;
-Snowball = new AttackType();
-Snowball.name = "Snowball";
-Snowball.damage = 10;
-Snowball.range = 4;
-Snowball.stunChance = 33;
-Snowball.accuracy = 90;
 Gun = new AttackType();
 Gun.name = "Bullet Fire";
 Gun.damage = 25;
@@ -961,12 +957,18 @@ Fists = new AttackType();
 Fists.name = "Fist Fight";
 Fists.damage = 35;
 Fists.range = 1;
+Snowball = new AttackType();
+Snowball.name = "Snowball";
+Snowball.damage = 10;
+Snowball.range = 4;
+Snowball.stunChance = 20;
+Snowball.accuracy = 90;
 FrostTouch = new AttackType();
 FrostTouch.name = "Frosty Touch";
 FrostTouch.damage = 20;
 FrostTouch.range = 1;
 FrostTouch.stunChance = 101;
-FrostTouch.reloadTime = 1;
+FrostTouch.reloadTime = 2;
 PoleSmash = new AttackType();
 PoleSmash.name = "Pole Smash";
 PoleSmash.damage = 75;
@@ -1106,13 +1108,36 @@ griditemarray = [];
 phygriditems = [];
 ZombieArray = [];
 ZombieArray.push(Browncoat);
+//Boss waves
+class BossWave {
+    constructor() {
+        this.name = "";
+        this.zombies = [];
+        this.icon = "";
+        this.availablecoords = [];
+        this.randomizecoords = false;
+        this.theme = "";
+    }
+}
+AllImps = new BossWave();
+AllImps.name = "Oops! All Imps";
+AllImps.zombies = [Imp];
+AllImps.icon = "Imp.PNG";    
+for (x=4; x<10; x++) {
+    for (y=0; y<5; y++) {
+        AllImps.availablecoords.push([x,y]);
+    }
+}
+AllImps.randomizecoords = true;
+AllImps.theme = "ImpTheme.mp3"; 
+
 gridx = 9
 gridy = 5
 gridsize = 1.45
 currentx = 0
 currenty = 0
 prevzposes = [];
-difficultylevel = 1;
+difficultylevel = 1; /*sandbox mode*/
 wc = document.getElementById("EverythingFitter");
 acs = document.getElementById("ArmorChomper");
 zhealtharray = [];
@@ -1316,7 +1341,7 @@ for (a in AC.attacks) {
         }
     }
 }
-function SwitchAD() {
+function SwitchAD() { /*change sprites when switching*/
     for (is in phygriditems) {
         phygriditems[is].remove();
     }
@@ -1735,10 +1760,19 @@ function ZombieTurn(z) {
                                     fighterPhysArray[fighterArray.indexOf(AC)].src = "ArmorChomperRight.PNG";
                                 }
                                 else {
-                                    CreateConsoleText("Armor Chomper did not do anything as they are chewing.");
-                                    ZombieTurn(0);
+                                    PlantTurnTheme.sound.currentTime = ZombieTurnTheme.sound.currentTime;
+                                    if (!(CriticalStage)) {
+                                        MusicFade(ZombieTurnTheme,PlantTurnTheme);
+                                    }
+                                    setTimeout(function() {
+                                        IsPlayerTurn = true;
+                                        CanMove = true;
+                                        abilitybuttons.style.display = "block";
+                                        UpdateTurnCount();
+                                    }, 500)
+                                    CreateConsoleText("Armor Chomper cannot attack as they are chewing.");
                                 }
-                            }, 1500);
+                            }, turntime);
                         }
                         else {
                             PlantTurnTheme.sound.currentTime = ZombieTurnTheme.sound.currentTime;
@@ -1836,10 +1870,19 @@ function ZombieTurn(z) {
                                                     fighterPhysArray[fighterArray.indexOf(AC)].src = "ArmorChomperRight.PNG";
                                                 }
                                                 else {
-                                                    CreateConsoleText("Armor Chomper did not do anything as they are chewing.");
-                                                    ZombieTurn(0);
+                                                    PlantTurnTheme.sound.currentTime = ZombieTurnTheme.sound.currentTime;
+                                                    if (!(CriticalStage)) {
+                                                        MusicFade(ZombieTurnTheme,PlantTurnTheme);
+                                                    }
+                                                    setTimeout(function() {
+                                                        IsPlayerTurn = true;
+                                                        CanMove = true;
+                                                        abilitybuttons.style.display = "block";
+                                                        UpdateTurnCount();
+                                                    }, 500)
+                                                    CreateConsoleText("Armor Chomper cannot attack as they are chewing.");
                                                 }
-                                            }, 1500);
+                                            }, turntime);
                                         }
                                         else {
                                             PlantTurnTheme.sound.currentTime = ZombieTurnTheme.sound.currentTime;
